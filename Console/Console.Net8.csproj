@@ -1,0 +1,72 @@
+<Project>
+  <!--
+    .NET 8 build of dmdext, limited to the "mirror" and "test" commands.
+
+    Publishes as a single self-contained win-x64 executable, so it runs without any
+    .NET runtime installed (e.g. inside a Proton/Wine prefix):
+
+      dotnet publish Console\Console.Net8.csproj -c Release
+
+    It lives next to the .NET Framework project (Console.csproj), so it uses its own
+    bin/obj folders to keep both builds from stepping on each other.
+  -->
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>obj.net8\</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin.net8\</BaseOutputPath>
+  </PropertyGroup>
+
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>DmdExt</RootNamespace>
+    <AssemblyName>dmdext</AssemblyName>
+    <StartupObject>DmdExt.DmdExt</StartupObject>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+    <UseWPF>true</UseWPF>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <DefineConstants>$(DefineConstants);PLATFORM_X64;DMDEXT_MIRROR_ONLY</DefineConstants>
+    <!-- some dependencies only ship .NET Framework builds, but are plain managed code -->
+    <AssetTargetFallback>$(AssetTargetFallback);net45;net40;net35;net20</AssetTargetFallback>
+    <NoWarn>$(NoWarn);NU1701;CA1416;CS0618;SYSLIB0014</NoWarn>
+    <!-- the .NET Framework build writes generated code into obj\ -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin\**;obj\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <!-- single self-contained executable -->
+  <PropertyGroup>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>embedded</DebugType>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\VersionAssemblyInfo.cs" Link="Properties\VersionAssemblyInfo.cs" />
+    <Compile Remove="Play\**;Server\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Test\TestImage.png" />
+    <None Update="dmdext.log.config" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommandLineParser" Version="1.9.71" />
+    <PackageReference Include="NLog" Version="5.3.4" />
+    <PackageReference Include="System.Reactive" Version="6.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LibDmd\LibDmd.Net8.csproj" />
+  </ItemGroup>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>

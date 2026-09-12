@@ -5,7 +5,9 @@ using LibDmd.DmdDevice;
 using LibDmd.Input;
 using LibDmd.Output.Virtual.AlphaNumeric;
 using LibDmd.Output.Virtual.Dmd;
+#if !DMDEXT_MIRROR_ONLY
 using LibDmd.Output.ZeDMD;
+#endif
 
 namespace DmdExt.Common
 {

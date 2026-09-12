@@ -10,15 +10,17 @@ using System.Windows;
 using CommandLine;
 using DmdExt.Common;
 using DmdExt.Mirror;
+#if !DMDEXT_MIRROR_ONLY
 using DmdExt.Play;
 using DmdExt.Server;
+using LibDmd.Input.ProPinball;
+#endif
 using DmdExt.Test;
 using LibDmd;
 using LibDmd.Common;
 using LibDmd.DmdDevice;
 using LibDmd.Input.FileSystem;
 using LibDmd.Input.PinballFX;
-using LibDmd.Input.ProPinball;
 using LibDmd.Output;
 using LibDmd.Output.FileOutput;
 using LibDmd.Output.PinUp;
@@ -32,7 +34,7 @@ namespace DmdExt
 	{
 		public static Application WinApp { get; } = new Application();
 		private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-#if !DEBUG
+#if !DEBUG && !NET
 		static readonly Mindscape.Raygun4Net.RaygunClient Raygun = new Mindscape.Raygun4Net.RaygunClient("J2WB5XK0jrP4K0yjhUxq5Q==");
 		private static readonly NLog.Targets.MemoryTarget MemLogger = new NLog.Targets.MemoryTarget {
 			Name = "Raygun Logger",
@@ -66,23 +68,30 @@ namespace DmdExt
 #endif
 
 			// setup logger
+#if NET
+			var assemblyPath = AppContext.BaseDirectory;
+#else
 			var assemblyPath = Path.GetDirectoryName(new Uri(assembly.CodeBase).LocalPath);
+#endif
 			var logConfigPath = Path.Combine(assemblyPath, "dmdext.log.config");
 			if (File.Exists(logConfigPath)) {
 				LogManager.ThrowConfigExceptions = true;
 				LogManager.Configuration = new XmlLoggingConfiguration(logConfigPath);
-#if !DEBUG
+#if !DEBUG && !NET
 				LogManager.Configuration.AddTarget("memory", MemLogger);
 				LogManager.Configuration.LoggingRules.Add(new LoggingRule("*", LogLevel.Trace, MemLogger));
 				LogManager.ReconfigExistingLoggers();
 #endif
 			}
-#if !DEBUG
+#if !DEBUG && !NET
 			else {
 				LogManager.Setup().LoadConfiguration(c => c.ForLogger(LogLevel.Debug).WriteTo(MemLogger));
 			}
 #endif
+#if !NET
+			// self-contained .NET 8 builds bring their own runtime
 			AssertDotNetVersion();
+#endif
 			AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
 			// enable exit handler
@@ -129,17 +138,19 @@ namespace DmdExt
 						_command = new MirrorCommand(config, (MirrorOptions)cmdLineOptions);
 						break;
 
-					case "play":
-						_command = new PlayCommand(config, (PlayOptions)cmdLineOptions);
-						break;
-
 					case "test":
 						_command = new TestCommand(config, (TestOptions)cmdLineOptions);
+						break;
+
+#if !DMDEXT_MIRROR_ONLY
+					case "play":
+						_command = new PlayCommand(config, (PlayOptions)cmdLineOptions);
 						break;
 
 					case "server":
 						_command = new ServerCommand(config, (ServerOptions)cmdLineOptions);
 						break;
+#endif
 
 					default:
 						throw new ArgumentOutOfRangeException();
@@ -199,8 +210,10 @@ namespace DmdExt
 				Logger.Info("Try installing the Visual C++ Redistributable for Visual Studio 2015 if you haven't so already:");
 				Logger.Info("    https://www.microsoft.com/en-us/download/details.aspx?id=48145");
 
+#if !DMDEXT_MIRROR_ONLY
 			} catch (UnknownFormatException e) {
 				Logger.Error(e.Message);
+#endif
 
 			} catch (WrongFormatException e) {
 				Logger.Error(e.Message);
@@ -214,6 +227,7 @@ namespace DmdExt
 			} catch (RenderException e) {
 				Logger.Error(e.Message);
 
+#if !DMDEXT_MIRROR_ONLY
 			} catch (NoRawDestinationException e) {
 				Logger.Error(e.Message);
 
@@ -222,6 +236,7 @@ namespace DmdExt
 
 			} catch (ProPinballSlaveException e) {
 				Logger.Error(e.Message);
+#endif
 
 			} catch (IncompatibleRenderer e) {
 				Logger.Error(e.Message);
@@ -296,7 +311,7 @@ namespace DmdExt
 		// ReSharper disable once UnusedParameter.Local
 		private static void ReportError(Exception ex)
 		{
-#if !DEBUG
+#if !DEBUG && !NET
 			Raygun.ApplicationVersion = _fullVersion;
 			Raygun.Send(ex, System.Linq.Enumerable.ToList(ReportingTags), new Dictionary<string, string> {
 				{ "args", string.Join(" ", _commandLineArgs) },

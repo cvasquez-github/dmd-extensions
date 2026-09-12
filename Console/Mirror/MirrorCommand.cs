@@ -13,7 +13,9 @@ using LibDmd.Frame;
 using LibDmd.Input;
 using LibDmd.Input.FutureDmd;
 using LibDmd.Input.PinballFX;
+#if !DMDEXT_MIRROR_ONLY
 using LibDmd.Input.ProPinball;
+#endif
 using LibDmd.Input.ScreenGrabber;
 using LibDmd.Input.TPAGrabber;
 using LibDmd.Output;
@@ -114,12 +116,14 @@ namespace DmdExt.Mirror
 					break;
 				}
 
+#if !DMDEXT_MIRROR_ONLY
 				case SourceType.ProPinball: {
 					reportingTags.Add("In:ProPinball");
 					Analytics.Instance.SetSource("Pro Pinball", "Timeshock");
 					graphs.Add(CreateGraph(new ProPinballSlave(_options.ProPinballArgs), "Pro Pinball Render Graph", reportingTags));
 					break;
 				}
+#endif
 
 				case SourceType.Screen:
 					var grabber = new ScreenGrabber {

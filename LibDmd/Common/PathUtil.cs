@@ -12,7 +12,11 @@ namespace LibDmd.Common
 {
 	public static class PathUtil
 	{
+#if NET
+		private static readonly string AssemblyPath = AppContext.BaseDirectory;
+#else
 		private static readonly string AssemblyPath = Path.GetDirectoryName(new Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath);
+#endif
 		private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 		private static string _sha;
 		private static string _fullVersion;
@@ -122,12 +126,17 @@ namespace LibDmd.Common
 				return assembly.Location;
 			}
 
+#if NET
+			// assemblies inside a single-file bundle have no location, but the executable does.
+			return Environment.ProcessPath;
+#else
 			if (!assembly.CodeBase.ToLowerInvariant().StartsWith("file:")) {
 				return null;
 			}
 
 			var uri = new UriBuilder(assembly.CodeBase);
 			return Uri.UnescapeDataString(uri.Path);
+#endif
 		}
 
 		private static string GetDllPath(string name)

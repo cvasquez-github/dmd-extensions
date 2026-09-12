@@ -44,8 +44,12 @@ namespace LibDmd.Output.PinUp
 
 			IsAvailable = true;
 
+#if NET
+			var assemblyFolder = AppContext.BaseDirectory;
+#else
 			var localPath = new Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath;
 			var assemblyFolder = Path.GetDirectoryName(localPath);
+#endif
 			var dllFileName = Path.Combine(assemblyFolder, Environment.Is64BitProcess ? "dmddevicePUP64.DLL" : "dmddevicePUP.DLL");
 			var pDll = NativeMethods.LoadLibrary(dllFileName);
 

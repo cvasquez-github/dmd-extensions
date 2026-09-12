@@ -84,7 +84,11 @@ namespace LibDmd.DmdDevice
 				_iniPath = envConfigPath;
 
 			} else {
+#if NET
+				var assemblyPath = AppContext.BaseDirectory;
+#else
 				var assemblyPath = Path.GetDirectoryName(new Uri(Assembly.GetExecutingAssembly().CodeBase).LocalPath);
+#endif
 				_iniPath = Path.Combine(assemblyPath, "DmdDevice.ini");
 			}
 			_parser = new FileIniDataParser();

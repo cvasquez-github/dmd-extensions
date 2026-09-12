@@ -8,13 +8,15 @@ using LibDmd.DmdDevice;
 using LibDmd.Output;
 using LibDmd.Output.FileOutput;
 using LibDmd.Output.Network;
+#if !DMDEXT_MIRROR_ONLY
 using LibDmd.Output.Pin2Dmd;
 using LibDmd.Output.PinDmd1;
 using LibDmd.Output.PinDmd2;
 using LibDmd.Output.PinDmd3;
 using LibDmd.Output.Pixelcade;
-using LibDmd.Output.Virtual.AlphaNumeric;
 using LibDmd.Output.ZeDMD;
+#endif
+using LibDmd.Output.Virtual.AlphaNumeric;
 using NLog;
 using static System.Windows.Threading.Dispatcher;
 using static DmdExt.Common.BaseOptions.DestinationType;
@@ -42,6 +44,7 @@ namespace DmdExt.Common
 		protected List<IDestination> GetRenderers(IConfiguration config, HashSet<string> reportingTags)
 		{
 			var renderers = new List<IDestination>();
+#if !DMDEXT_MIRROR_ONLY
 			if (config.PinDmd1.Enabled) {
 				var pinDmd1 = PinDmd1.GetInstance();
 				if (pinDmd1.IsAvailable) {
@@ -185,6 +188,7 @@ namespace DmdExt.Common
 					Logger.Warn("Device Pixelcade is not available.");
 				}
 			}
+#endif
 
 			if (config.VirtualDmd.Enabled) {
 				var virtualDmd = ShowVirtualDmd(config);

@@ -4,8 +4,10 @@ using System.Reflection;
 using CommandLine;
 using CommandLine.Text;
 using DmdExt.Mirror;
+#if !DMDEXT_MIRROR_ONLY
 using DmdExt.Play;
 using DmdExt.Server;
+#endif
 using DmdExt.Test;
 
 namespace DmdExt.Common
@@ -15,29 +17,37 @@ namespace DmdExt.Common
 		[VerbOption("mirror", HelpText = "Mirrors pixel data from the screen or memory to all available devices.")]
 		public MirrorOptions Mirror { get; set; }
 
+#if !DMDEXT_MIRROR_ONLY
 		[VerbOption("play", HelpText = "Plays any media on all available devices (currently only images).")]
 		public PlayOptions Play { get; set; }
+#endif
 
 		[VerbOption("test", HelpText = "Displays a test image on all available devices.")]
 		public TestOptions Test { get; set; }
 
+#if !DMDEXT_MIRROR_ONLY
 		[VerbOption("server", HelpText = "Starts a websocket server to receive frames on.")]
 		public ServerOptions Server { get; set; }
+#endif
 
 		public Options()
 		{
 			Mirror = new MirrorOptions();
-			Play = new PlayOptions();
 			Test = new TestOptions();
+#if !DMDEXT_MIRROR_ONLY
+			Play = new PlayOptions();
 			Server = new ServerOptions();
+#endif
 		}
 
 		public void Validate()
 		{
 			Mirror.Validate();
-			Play.Validate();
 			Test.Validate();
+#if !DMDEXT_MIRROR_ONLY
+			Play.Validate();
 			Server.Validate();
+#endif
 		}
 
 		[HelpVerbOption]
@@ -46,12 +56,14 @@ namespace DmdExt.Common
 			switch (verb) {
 				case "mirror":
 					return AutoBuild(Mirror, "dmdext mirror --source=<source> [--destination=<destination>]", Mirror.LastParserState);
-				case "play":
-					return AutoBuild(Play, "dmdext play --file=<image path> [--destination=<destination>]", Play.LastParserState);
 				case "test":
 					return AutoBuild(Test, "dmdext test [--destination=<destination>]", Test.LastParserState);
+#if !DMDEXT_MIRROR_ONLY
+				case "play":
+					return AutoBuild(Play, "dmdext play --file=<image path> [--destination=<destination>]", Play.LastParserState);
 				case "server":
 					return AutoBuild(Test, "dmdext server [--ip=<ip address>] [--port=<port>] [--path=<path>]", Server.LastParserState);
+#endif
 				default:
 					return AutoBuild(this, "dmdext <command> [<options>]", null, false);
 			}

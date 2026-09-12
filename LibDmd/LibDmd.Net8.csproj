@@ -1,0 +1,77 @@
+<Project>
+  <!--
+    .NET 8 build of LibDmd, reduced to what "dmdext mirror" needs: Pinball FX sources,
+    virtual DMD and network stream. Hardware outputs, analytics and Pro Pinball are left out.
+
+    It lives next to the .NET Framework project (LibDmd.csproj), so it uses its own
+    bin/obj folders to keep both builds from stepping on each other.
+  -->
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>obj.net8\</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin.net8\</BaseOutputPath>
+  </PropertyGroup>
+
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <OutputType>Library</OutputType>
+    <RootNamespace>LibDmd</RootNamespace>
+    <AssemblyName>LibDmd</AssemblyName>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <PlatformTarget>x64</PlatformTarget>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <DebugType>embedded</DebugType>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <DefineConstants>$(DefineConstants);PLATFORM_X64;DMDEXT_MIRROR_ONLY</DefineConstants>
+    <!-- some dependencies only ship .NET Framework builds, but are plain managed code -->
+    <AssetTargetFallback>$(AssetTargetFallback);net45;net40;net35;net20</AssetTargetFallback>
+    <NoWarn>$(NoWarn);NU1701;CA1416;CS0618;SYSLIB0014</NoWarn>
+    <!-- the .NET Framework build writes generated XAML code into obj\ -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin\**;obj\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\VersionAssemblyInfo.cs" Link="Properties\VersionAssemblyInfo.cs" />
+
+    <!-- replaced by AnalyticsStub.cs -->
+    <Compile Remove="Analytics.cs" />
+    <!-- DmdDevice.dll entry point, not needed by the console -->
+    <Compile Remove="DmdDevice\DmdDevice.cs" />
+    <!-- C++/CLI bridge, .NET Framework only -->
+    <Compile Remove="Input\ProPinball\**" />
+    <!-- hardware and streaming outputs -->
+    <Compile Remove="Output\PinDmd1\**;Output\PinDmd2\**;Output\PinDmd3\**;Output\Pin2Dmd\**;Output\Pixelcade\**;Output\ZeDMD\**" />
+    <Compile Remove="Output\Network\BrowserStream.cs;Output\Network\VpdbStream.cs" />
+    <Compile Remove="Output\FileOutput\VideoOutput.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="icon.png" />
+    <Resource Include="Output\Virtual\Dmd\*.png" />
+    <EmbeddedResource Include="Output\Virtual\Dmd\*.vert;Output\Virtual\Dmd\*.frag" />
+    <EmbeddedResource Include="Output\Virtual\AlphaNumeric\**\*.svg" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- ColorPicker in the virtual display settings dialogs -->
+    <PackageReference Include="Extended.Wpf.Toolkit" Version="4.5.0" />
+    <PackageReference Include="ini-parser" Version="2.5.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="NLog" Version="5.3.4" />
+    <PackageReference Include="SharpGL" Version="3.1.1" />
+    <PackageReference Include="SharpGL.SceneGraph" Version="3.1.1" />
+    <PackageReference Include="SharpGL.WPF" Version="3.1.1" />
+    <PackageReference Include="SkiaSharp" Version="2.88.9" />
+    <PackageReference Include="SkiaSharp.Svg" Version="1.60.0" />
+    <PackageReference Include="SkiaSharp.Views.WPF" Version="2.88.9" />
+    <PackageReference Include="System.Reactive" Version="6.0.1" />
+    <PackageReference Include="WebSocketSharp" Version="1.0.3-rc11" />
+    <PackageReference Include="WriteableBitmapEx" Version="1.6.8" />
+  </ItemGroup>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>
