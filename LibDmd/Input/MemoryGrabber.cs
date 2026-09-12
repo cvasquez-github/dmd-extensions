@@ -61,7 +61,8 @@ namespace LibDmd.Input
 		protected IntPtr FindGameHandle()
 		{
 			// search the process list
-			foreach (var p in Process.GetProcesses())
+			var processes = Process.GetProcesses();
+			foreach (var p in processes)
 			{
 				// try this process
 				var h = AttachGameProcess(p);
@@ -71,9 +72,26 @@ namespace LibDmd.Input
 					return h;
 			}
 
-			// no matches
+			// no matches. log what's running once, which helps when the process shows up
+			// under a different name or not at all (e.g. under Wine).
+			if (!_loggedProcessNames)
+			{
+				_loggedProcessNames = true;
+				var names = new string[processes.Length];
+				for (var i = 0; i < processes.Length; i++) {
+					try {
+						names[i] = processes[i].ProcessName;
+					} catch (Exception) {
+						names[i] = "?";
+					}
+				}
+				Array.Sort(names);
+				Logger.Info($"{Name} not found among {processes.Length} processes: {string.Join(", ", names)}");
+			}
 			return IntPtr.Zero;
 		}
+
+		private bool _loggedProcessNames;
 
 		/// <summary>
 		/// Poll for the subject process to start

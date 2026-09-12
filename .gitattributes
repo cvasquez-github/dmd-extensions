@@ -1,0 +1,2 @@
+# shell scripts run on Linux (e.g. Proton launch wrappers) and break with CRLF
+*.sh text eol=lf

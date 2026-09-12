@@ -56,6 +56,8 @@
   <ItemGroup>
     <Resource Include="Test\TestImage.png" />
     <None Update="dmdext.log.config" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <!-- Steam launch wrapper for running mirror under Proton -->
+    <None Update="Proton\dmdext-proton.sh" Link="dmdext-proton.sh" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 
   <ItemGroup>

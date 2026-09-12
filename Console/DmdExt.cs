@@ -92,6 +92,12 @@ namespace DmdExt
 			// self-contained .NET 8 builds bring their own runtime
 			AssertDotNetVersion();
 #endif
+			// WPF's hardware rendering goes through Direct3D 9, which Wine/Proton doesn't
+			// composite correctly (the window ends up as a single colored triangle).
+			if (InteropUtil.IsRunningOnWine) {
+				Logger.Info("Wine detected, using software rendering for virtual displays.");
+				System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
+			}
 			AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
 			// enable exit handler

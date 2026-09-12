@@ -55,6 +55,19 @@ namespace LibDmd.Common
 			MouseLeave += (sender, args) => Resources["GripColor"] = Brushes.Transparent;
 		}
 
+		protected override void OnInitialized(EventArgs e)
+		{
+			base.OnInitialized(e);
+
+			// Wine doesn't composite per-pixel transparent (layered) windows properly: the window
+			// shows up as a colored triangle with only the resize grip visible. Use an opaque one.
+			if (InteropUtil.IsRunningOnWine && AllowsTransparency) {
+				Logger.Info("Wine detected, disabling transparency of window \"{0}\".", Title);
+				AllowsTransparency = false;
+				Background = Brushes.Black;
+			}
+		}
+
 		protected void Initialize()
 		{
 			DataContext = this;

@@ -680,8 +680,10 @@ namespace LibDmd.Output.Virtual.Dmd
 				}
 			}
 
-			// Render Dmd
-			gl.BindFramebufferEXT(OpenGL.GL_FRAMEBUFFER_EXT, 0);
+			// Render Dmd into the render context's own frame buffer, which is what gets copied to the
+			// WPF image. Drawing into the hidden window's back buffer (0) happens to work with Windows
+			// drivers, but stays black under Wine.
+			gl.BindFramebufferEXT(OpenGL.GL_FRAMEBUFFER_EXT, GetOutputFramebuffer(gl));
 			gl.Viewport(0, 0, (int)Dmd.Width, (int)Dmd.Height);
 			_dmdShader.Bind(gl);
 			if (_dsGlassTexture != -1) gl.Uniform1(_dsGlassTexture, 0);
@@ -697,6 +699,21 @@ namespace LibDmd.Output.Virtual.Dmd
 			_dmdShader.Unbind(gl);
 
 			_quadVbo.Unbind(gl);
+		}
+
+		private static readonly FieldInfo FrameBufferIdField = typeof(SharpGL.RenderContextProviders.FBORenderContextProvider)
+			.GetField("frameBufferID", BindingFlags.NonPublic | BindingFlags.Instance);
+
+		/// <summary>
+		/// Returns the frame buffer of SharpGL's FBO render context, which it re-creates on resize.
+		/// Falls back to the default frame buffer if it can't be determined.
+		/// </summary>
+		private static uint GetOutputFramebuffer(OpenGL gl)
+		{
+			if (FrameBufferIdField != null && gl.RenderContextProvider is SharpGL.RenderContextProviders.FBORenderContextProvider provider) {
+				return (uint)FrameBufferIdField.GetValue(provider);
+			}
+			return 0;
 		}
 
 		#endregion

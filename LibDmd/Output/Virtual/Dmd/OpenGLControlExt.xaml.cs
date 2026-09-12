@@ -35,6 +35,8 @@ namespace LibDmd.Output.Virtual.Dmd
 		private double _dpiY;
 		private PixelFormat _format;
 		private int _bytesPerPixel;
+		// renders the last frame once more after a short pause, see RequestRender()
+		private readonly DispatcherTimer _presentTimer;
 
 		protected static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
@@ -46,6 +48,8 @@ namespace LibDmd.Output.Virtual.Dmd
 			InitializeComponent();
 
 			timer = new DispatcherTimer();
+			_presentTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+			_presentTimer.Tick += PresentTimer_Tick;
 
 			Unloaded += OpenGLControlExt_Unloaded;
 			Loaded += OpenGLControlExt_Loaded;
@@ -81,6 +85,7 @@ namespace LibDmd.Output.Virtual.Dmd
 
 			timer.Stop();
 			timer.Tick -= timer_Tick;
+			_presentTimer.Stop();
 		}
 
 		/// <summary>
@@ -184,10 +189,24 @@ namespace LibDmd.Output.Virtual.Dmd
 			DoRender();
 		}
 
+		private void PresentTimer_Tick(object sender, EventArgs e)
+		{
+			_presentTimer.Stop();
+			DoRender();
+		}
+
 		public void RequestRender()
 		{
 			try{ 
-				Dispatcher.Invoke(() => DoRender());
+				Dispatcher.Invoke(() => {
+					DoRender();
+
+					// Render the last frame once more if no other frame follows shortly. Under Wine the
+					// window doesn't always show a render until something else repaints it, which left
+					// e.g. the idle image hidden behind the previous frame.
+					_presentTimer.Stop();
+					_presentTimer.Start();
+				});
 
 			} catch (TaskCanceledException e) {
 				Logger.Error(e, "Main thread seems already destroyed, aborting.");

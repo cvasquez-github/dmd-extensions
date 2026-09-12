@@ -204,11 +204,15 @@ namespace LibDmd.Input.PinballFX
 			// Open the process for wait and read operations
 			var processHandle = OpenProcess(SYNCHRONIZE | PROCESS_VM_READ, false, gameProc.Id);
 			if (processHandle == IntPtr.Zero) {
+				Logger.Warn($"Found {gameProc.ProcessName} (pid {gameProc.Id}) but could not open it (error {System.Runtime.InteropServices.Marshal.GetLastWin32Error()}).");
 				return IntPtr.Zero;
 			}
 
 			// Find DMD pointer base address offset in memory with its signature pattern.
 			IntPtr baseOffset = FindPattern(gameProc, BaseAddress(gameProc), gameProc.MainModule.ModuleMemorySize, DMDPointerSig, 19);
+			if (baseOffset == IntPtr.Zero) {
+				Logger.Warn($"Found {gameProc.ProcessName} (pid {gameProc.Id}) but not the DMD pointer signature in its memory.");
+			}
 			var pointerBuf = new byte[4];
 			ReadProcessMemory(gameProc.Handle, baseOffset, pointerBuf, pointerBuf.Length, IntPtr.Zero);
 			_pBaseAddress = B4ToPointer(pointerBuf);
