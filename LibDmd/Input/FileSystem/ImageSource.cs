@@ -132,8 +132,12 @@ namespace LibDmd.Input.FileSystem
 			try {
 				var bmp = new BitmapImage();
 				bmp.BeginInit();
+				// load and freeze right away, so frames can be processed on any thread, e.g.
+				// when idling is started from a source's thread.
+				bmp.CacheOption = BitmapCacheOption.OnLoad;
 				bmp.UriSource = new Uri(Path.IsPathRooted(fileName) ? fileName : Path.Combine(Directory.GetCurrentDirectory(), fileName));
 				bmp.EndInit();
+				bmp.Freeze();
 
 				_frames = new BehaviorSubject<BmpFrame>(new BmpFrame(bmp));
 

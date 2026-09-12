@@ -45,6 +45,9 @@ namespace LibDmd.Input.PinballFX
 
 		public IObservable<string> GetGameName() => _gameName;
 
+		// True while no table is loaded, e.g. in the game's menus.
+		private bool _noGame;
+
 		protected override DmdFrame CaptureDMD()
 		{
 			// Initialize a new writeable bitmap to receive DMD pixels.
@@ -53,10 +56,19 @@ namespace LibDmd.Input.PinballFX
 			// Check if a table is loaded... and retrieve DMD offset in memory.
 			_dmdAddress = GetDMDOffset(_hProcess);
 
-			// ..if not, return an empty frame (blank DMD).
+			// ..if not, report once that there's no game (null name) and send no frames,
+			// so the render graph can idle.
 			if (_dmdAddress == IntPtr.Zero) {
-				return new DmdFrame(128, 32, frame, 2);
+				if (!_noGame) {
+					_noGame = true;
+					_lastFrame = null;
+					_lastGameName = null;
+					Logger.Info("No Pinball FX3 game loaded.");
+					_gameName.OnNext(null);
+				}
+				return null;
 			}
+			_noGame = false;
 
 			// Retrieve DMD color from memory.
 			_dmdColor.OnNext(GetDMDColor(_hProcess));
@@ -99,7 +111,7 @@ namespace LibDmd.Input.PinballFX
 					frame[pos] = Math.Max((byte)0, Math.Min((byte)3, pixelByte));
 
 					// check for identical frame
-					if (identical && (_lastFrame == null || _lastFrame[pos] == frame[pos])) {
+					if (identical && (_lastFrame == null || _lastFrame[pos] != frame[pos])) {
 						identical = false;
 					}
 

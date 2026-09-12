@@ -300,6 +300,7 @@ namespace LibDmd.Common
 				bitmapData.Scan0, bitmapData.Stride * bitmapData.Height, bitmapData.Stride);
 
 			bitmap.UnlockBits(bitmapData);
+			bitmapSource.Freeze(); // so frames can be processed on any thread
 			return bitmapSource;
 		}
 

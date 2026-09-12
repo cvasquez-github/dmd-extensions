@@ -70,12 +70,12 @@ namespace LibDmd.Output.Network
 						break;
 					}
 					case "gameName": {
-						char c;
+						// read up to the terminating null, or to the end for senders that don't write one
 						var gameName = "";
-						do {
-							c = reader.ReadChar();
+						char c;
+						while (reader.BaseStream.Position < reader.BaseStream.Length && (c = reader.ReadChar()) != 0x0) {
 							gameName += c;
-						} while (c != 0x0) ;
+						}
 						action.OnGameName(gameName);
 						break;
 					}
@@ -220,7 +220,8 @@ namespace LibDmd.Output.Network
 			var data = Encoding.ASCII
 				.GetBytes("gameName")
 				.Concat(new byte[] { 0x0 })
-				.Concat(Encoding.ASCII.GetBytes(gameName));
+				.Concat(Encoding.ASCII.GetBytes(gameName))
+				.Concat(new byte[] { 0x0 }); // receivers read the name up to a terminating null
 			Logger.Info("Sent game name to socket.");
 			return data.ToArray();
 		}

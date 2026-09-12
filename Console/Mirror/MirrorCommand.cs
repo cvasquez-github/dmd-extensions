@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Windows.Media;
 using DmdExt.Common;
 using LibDmd;
@@ -20,6 +21,7 @@ using LibDmd.Input.ScreenGrabber;
 using LibDmd.Input.TPAGrabber;
 using LibDmd.Output;
 using LibDmd.Output.FileOutput;
+using LibDmd.Output.Network;
 using LibDmd.Processor;
 
 namespace DmdExt.Mirror
@@ -189,7 +191,7 @@ namespace DmdExt.Mirror
 				var g = graphs.Graphs.FirstOrDefault();
 				if (g != null) {
 					if (g.Source is IGameNameSource s) {
-						_subscriptions.Add(s.GetGameName().Subscribe(name => {
+						_subscriptions.Add(s.GetGameName().Where(name => name != null).Subscribe(name => {
 							Analytics.Instance.SetSource(g.Source.Name, name);
 							Analytics.Instance.StartGame();
 						}));
@@ -216,7 +218,7 @@ namespace DmdExt.Mirror
 				var graph = graphs.Graphs.FirstOrDefault();
 				if (graph != null) {
 					if (graph.Source is IGameNameSource s) {
-						var nameSub = s.GetGameName().Subscribe(name => {
+						var nameSub = s.GetGameName().Where(name => name != null).Subscribe(name => {
 							Logger.Info($"New game detected at {graph.Source.Name}: {name}");
 							Analytics.Instance.SetSource(graph.Source.Name, name);
 							Analytics.Instance.StartGame();
@@ -229,13 +231,37 @@ namespace DmdExt.Mirror
 				}
 			}
 
+			// stream the game name, which the source only knows once the game is running
+			if (_config.NetworkStream.Enabled) {
+				var graph = graphs.Graphs.FirstOrDefault();
+				if (graph?.Source is IGameNameSource s) {
+					var networkStream = graph.Destinations.OfType<NetworkStream>().FirstOrDefault();
+					if (networkStream != null) {
+						_subscriptions.Add(s.GetGameName().Subscribe(name => networkStream.SetGameName(name ?? "")));
+					}
+				}
+			}
+
+			// while a source reports no game, idle: play --idle-play or clear the display
+			foreach (var graph in graphs.Graphs) {
+				if (graph.Source is IGameNameSource gameNameSource) {
+					_subscriptions.Add(gameNameSource.GetGameName().Subscribe(name => {
+						if (name == null) {
+							graph.StartIdling();
+						} else {
+							graph.StopIdling();
+						}
+					}));
+				}
+			}
+
 			// raw output
 			if (_config.RawOutput.Enabled) {
 				var graph = graphs.Graphs.FirstOrDefault();
 				if (graph?.Source is IGameNameSource s) {
 					var rawOutput = graph.Destinations.OfType<RawOutput>().FirstOrDefault();
 					if (rawOutput != null) {
-						var nameSub = s.GetGameName().Subscribe(name => {
+						var nameSub = s.GetGameName().Where(name => name != null).Subscribe(name => {
 							rawOutput.SetGameName(name);
 						});
 						_subscriptions.Add(nameSub);

@@ -121,7 +121,7 @@ namespace DmdExt.Common
 		[Option("color-matrix", HelpText = "Color matrix to use for Pixelcade displays. Default: RBG.")]
 		public ColorMatrix ColorMatrix { get; set; } = ColorMatrix.Rbg;
 
-		[Option("url", HelpText = "Websocket URL for streaming via network. Default: ws://localhost/server")]
+		[Option("url", HelpText = "Websocket URL for streaming via network. If set, frames are also streamed when the destination isn't \"network\". Default: ws://localhost/server")]
 		public string WebsocketUrl { get; set; } = null;
 
 		[Option("retry", HelpText = "If set, retry connecting if the Websocket connection fails. Default: false" )]
@@ -518,7 +518,9 @@ namespace DmdExt.Common
 			_options = options;
 		}
 
-		public bool Enabled => _options.Destination == BaseOptions.DestinationType.Network;
+		// a given URL also streams to the network next to the chosen destination
+		public bool Enabled => _options.Destination == BaseOptions.DestinationType.Network
+		                       || !string.IsNullOrEmpty(_options.WebsocketUrl);
 		public string Url => _options.WebsocketUrl;
 		public bool Retry => _options.WebsocketRetry;
 		public int RetryInterval => _options.WebsocketRetryInterval;

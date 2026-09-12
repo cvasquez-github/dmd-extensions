@@ -158,6 +158,17 @@ namespace LibDmd.Output.Network
 			}
 		}
 
+		/// <summary>
+		/// Sends the name of the game, for sources that only know it once the game is running.
+		/// </summary>
+		public void SetGameName(string gameName)
+		{
+			_gameName = gameName;
+			if (IsAvailable) {
+				_client.Send(_serializer.SerializeGameName(gameName));
+			}
+		}
+
 		public void SetColor(Color color)
 		{
 			_color = color;
@@ -190,7 +201,10 @@ namespace LibDmd.Output.Network
 
 		public void ClearDisplay()
 		{
-			// ignore
+			// a blank frame, so receivers clear their display too
+			if (!_disposed) {
+				SendGray(new byte[_serializer.Dimensions.Surface], 2);
+			}
 		}
 
 		public void Dispose()

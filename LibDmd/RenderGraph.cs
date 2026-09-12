@@ -134,6 +134,10 @@ namespace LibDmd
 		private IDisposable _idleRenderer;
 		private IDisposable _activeRenderer;
 		private RenderGraph _idleRenderGraph;
+		// while idling, frames still queued from the source are dropped, so they can't
+		// overwrite what the idle renderer shows.
+		private volatile bool _idling;
+		private bool _droppedWhileIdling;
 		
 		private readonly CompositeDisposable _activeSources = new CompositeDisposable();
 		private readonly bool _runOnMainThread;
@@ -1647,7 +1651,7 @@ namespace LibDmd
 
 				// now render it
 				src = src.Do(_ => StopIdling());
-				var dest = src.Select(frame => (TIn)frame.Clone()).Select(processor).Do(onNext);
+				var dest = src.Select(frame => (TIn)frame.Clone()).Select(processor).Do(UnlessIdling(onNext));
 
 				// but subscribe to a throttled idle action
 				dest = dest.Throttle(TimeSpan.FromMilliseconds(IdleAfter));
@@ -1669,7 +1673,7 @@ namespace LibDmd
 					src = src.ObserveOn(Scheduler.Default);
 				}
 
-				_activeSources.Add(src.Select(frame => (TIn)frame.Clone()).Select(processor).Subscribe(onNext));
+				_activeSources.Add(src.Select(frame => (TIn)frame.Clone()).Select(processor).Subscribe(UnlessIdling(onNext)));
 			}
 		}
 
@@ -1681,11 +1685,16 @@ namespace LibDmd
 		/// <remarks>
 		/// This sets up a new render graph with the current destinations.
 		/// </remarks>
-		private void StartIdling()
+		public void StartIdling()
 		{
+			_idling = true;
+			_droppedWhileIdling = false;
+			if (_idleRenderer != null) {
+				return;
+			}
 			if (IdlePlay != null) {
 				ISource source;
-				Logger.Info("Idle timeout ({0}ms), playing {1}.", IdleAfter, IdlePlay);
+				Logger.Info("Idling, playing {0}.", IdlePlay);
 				switch (Path.GetExtension(IdlePlay.ToLower())) {
 					case ".png":
 					case ".jpg":
@@ -1711,7 +1720,7 @@ namespace LibDmd
 				_idleRenderer = _idleRenderGraph.StartRendering();
 
 			} else {
-				Logger.Info("Idle timeout ({0}ms), clearing display.", IdleAfter);
+				Logger.Info("Idling, clearing display.");
 				ClearDisplay();
 			}
 		}
@@ -1719,16 +1728,36 @@ namespace LibDmd
 		/// <summary>
 		/// Stops idling source.
 		/// </summary>
-		private void StopIdling()
+		public void StopIdling()
 		{
+			if (_idling) {
+				Logger.Debug("Stopping idle renderer of {0}.", Name);
+			}
+			_idling = false;
 			if (_idleRenderer != null) {
 				_idleRenderer.Dispose();
 				_idleRenderer = null;
 			}
-			if (_idleRenderGraph != null) {
-				_idleRenderGraph.Dispose();
-				_idleRenderGraph = null;
-			}
+			// only stop the idle source: the idle graph shares its destinations with this
+			// graph, and disposing it would dispose them too.
+			_idleRenderGraph = null;
+		}
+
+		/// <summary>
+		/// Wraps a destination's render action so frames are dropped while idling.
+		/// </summary>
+		private Action<T> UnlessIdling<T>(Action<T> onNext)
+		{
+			return frame => {
+				if (_idling) {
+					if (!_droppedWhileIdling) {
+						_droppedWhileIdling = true;
+						Logger.Debug("Dropping frames from {0} while idling.", Source?.Name);
+					}
+					return;
+				}
+				onNext(frame);
+			};
 		}
 
 		/// <summary>

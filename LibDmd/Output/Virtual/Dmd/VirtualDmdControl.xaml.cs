@@ -70,6 +70,7 @@ namespace LibDmd.Output.Virtual.Dmd
 		private bool _hasFrame; // Flag set to true when a new frame is to be processed (following a call to RenderXXX)
 		private Dimensions _frameDimensions = Dimensions.Standard;
 		private FrameFormat _frameType = FrameFormat.AlphaNumeric; // Format of the frame to be processed
+		private FrameFormat _lastDrawnFrameType = FrameFormat.AlphaNumeric; // Format of the last drawn frame, to log format changes
 		private BitmapSource _frameBitmap; // Bitmap of the frame to be processed if RenderBitmap was called
 		private byte[] _frameData; // Raw data of the frame to be processed
 
@@ -160,6 +161,7 @@ namespace LibDmd.Output.Virtual.Dmd
 			_hasFrame = true;
 			_frameType = FrameFormat.Bitmap;
 			_frameBitmap = frame.Bitmap;
+			Logger.Debug("Virtual DMD received bitmap frame {0}.", frame.Dimensions);
 			SetDimensions(frame.Dimensions);
 			Dmd.RequestRender();
 			CurrentFrameFormat = FrameFormat.Bitmap;
@@ -567,6 +569,11 @@ namespace LibDmd.Output.Virtual.Dmd
 
 				// Update DMD texture with latest frame
 				_hasFrame = false;
+				if (_frameType != _lastDrawnFrameType)
+				{
+					Logger.Debug("Virtual DMD drawing {0} frame, was {1}.", _frameType, _lastDrawnFrameType);
+					_lastDrawnFrameType = _frameType;
+				}
 				gl.ActiveTexture(OpenGL.GL_TEXTURE2);
 				switch (_frameType)
 				{
