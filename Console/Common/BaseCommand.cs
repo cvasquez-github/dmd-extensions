@@ -254,7 +254,8 @@ namespace DmdExt.Common
 				Height = config.VirtualDmd.Height,
 				IgnoreAspectRatio = config.VirtualDmd.IgnoreAr
 			};
-			dmd.Setup(config as Configuration, config is Configuration iniConfig ? iniConfig.GameName : null);
+			// pass command line options too, so their --virtual-* style (e.g. padding) is applied
+			dmd.Setup(config, config is Configuration iniConfig ? iniConfig.GameName : null);
 			var thread = new Thread(() => {
 
 				// Create our context, and install it:
