@@ -38,8 +38,8 @@ BACKGLASS_HEIGHT=1080
 BACKGLASS_PATH=""
 
 # image shown in the backglass window while no table is loaded, or if a table has no
-# image. leave empty to use the game's default image from the backglass folder
-# (PinballFX3.png for Pinball FX Classic), or black if there's none.
+# image. leave empty to use DEFAULT_IDLE.png from the backglass folder if there is one, else
+# the game's default image there (PinballFX3.png for Pinball FX Classic), or black.
 BACKGLASS_IDLE=""
 
 # virtual DMD window: its width in desktop pixels, the black border around the dots
@@ -58,10 +58,11 @@ NETWORK_HOST=""
 NETWORK_PORT=8080
 NETWORK_PATH="/dmd"
 
-# image (png, jpg or gif) shown while no table is loaded, e.g. in the game's menus.
-# it goes to all outputs, including the network, where receivers also get an empty
-# game name. by default dmdext's test image. leave empty to just clear the DMD.
-IDLE_PLAY="$SCRIPT_DIR/idle.png"
+# image (png, jpg or gif) shown on the DMD while no table is loaded, e.g. in the game's
+# menus. it goes to all outputs, including the network, where receivers also get an empty
+# game name. leave empty to use DEFAULT_IDLE.gif, .png or .jpg next to this script if there
+# is one, else dmdext's test image (idle.png). set to "none" to just clear the DMD.
+IDLE_PLAY=""
 
 # additional dmdext arguments, e.g. EXTRA_ARGS=(--virtual-dot-glow 0.5)
 EXTRA_ARGS=()
@@ -107,7 +108,15 @@ GAME_PID=$!
 	fi
 
 	IDLE_ARGS=()
-	if [ -n "$IDLE_PLAY" ]; then
+	if [ -z "$IDLE_PLAY" ]; then
+		for candidate in DEFAULT_IDLE.gif DEFAULT_IDLE.png DEFAULT_IDLE.jpg idle.png; do
+			if [ -f "$SCRIPT_DIR/$candidate" ]; then
+				IDLE_PLAY="$SCRIPT_DIR/$candidate"
+				break
+			fi
+		done
+	fi
+	if [ -n "$IDLE_PLAY" ] && [ "$IDLE_PLAY" != none ]; then
 		if [ -f "$IDLE_PLAY" ]; then
 			IDLE_ARGS=(--idle-play "$(win_path "$IDLE_PLAY")")
 		else

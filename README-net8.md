@@ -71,7 +71,7 @@ Queda en `publish\dmdext-net8-win-x64\`:
 | `dmdext.exe` | Ejecutable único, sin dependencias |
 | `dmdext.log.config` | Configuración de logs (NLog) |
 | `dmdext-proton.sh` | Script de lanzamiento para Steam (sección 4) |
-| `idle.png` | Imagen del DMD sin mesa por defecto: la imagen de prueba de dmdext (`Console/Test/TestImage.png`) |
+| `idle.png` | Imagen del DMD sin mesa: la imagen de prueba de dmdext (`Console/Test/TestImage.png`). Se usa si no hay un `DEFAULT_IDLE.gif`, `.png` o `.jpg` junto a `dmdext.exe` |
 
 Los proyectos .NET 8 conviven con los originales (.NET Framework) y usan sus propias
 carpetas `bin.net8/` y `obj.net8/`.
@@ -139,12 +139,12 @@ el juego.
 | `BACKGLASS` | `true` para mostrar la ventana de backglass |
 | `BACKGLASS_X`, `BACKGLASS_Y`, `BACKGLASS_WIDTH`, `BACKGLASS_HEIGHT` | Área de la pantalla del backglass, en píxeles del escritorio. El DMD se ubica relativo a ella |
 | `BACKGLASS_PATH` | Carpeta de las imágenes. Vacío = la carpeta `data/steam` del juego |
-| `BACKGLASS_IDLE` | Imagen sin mesa. Vacío = imagen por defecto del juego (`PinballFX3.png`) o negro |
+| `BACKGLASS_IDLE` | Imagen sin mesa. Vacío = `DEFAULT_IDLE.png` de la carpeta de imágenes; si no está, la imagen por defecto del juego (`PinballFX3.png`); si tampoco, negro |
 | `DMD_WIDTH` | Ancho de la ventana del DMD en píxeles; el alto sale de la proporción |
 | `DMD_PADDING` | Borde negro alrededor de los puntos, **en puntos del DMD** |
 | `DMD_BOTTOM_MARGIN` | Espacio entre el DMD y el borde inferior del área del backglass |
 | `NETWORK_HOST`, `NETWORK_PORT`, `NETWORK_PATH` | Receptor WebSocket. `NETWORK_HOST` vacío = sin red |
-| `IDLE_PLAY` | Imagen del DMD sin mesa (PNG, JPG o GIF animado). Por defecto `idle.png`. Vacío = DMD en blanco |
+| `IDLE_PLAY` | Imagen del DMD sin mesa (PNG, JPG o GIF animado). Vacío = `DEFAULT_IDLE.gif`, `.png` o `.jpg` junto a `dmdext.exe`, si existe; si no, `idle.png`. `none` = DMD en blanco |
 | `EXTRA_ARGS` | Otros argumentos de dmdext, p. ej. `(--virtual-dot-glow 0.5)` |
 
 Por defecto el DMD queda centrado abajo en el área del backglass. Para ver la posición de
@@ -169,9 +169,11 @@ que está corriendo:
 1. **Con mesa:** muestra `<nombre de la mesa>.png` (o `.jpg`), p. ej. `UNIVERSAL_Jaws.png`,
    `WMS_Indiana_Jones.png`. Es el mismo nombre que llega por red en `gameName`.
 2. **Sin mesa, o si la mesa no tiene imagen:** muestra `--backglass-idle` si está definido.
-3. **Si no hay `--backglass-idle`:** muestra la imagen por defecto del juego, `PinballFX3.png`
+3. **Si no hay `--backglass-idle`:** muestra `DEFAULT_IDLE.png` (o `.jpg`) de la carpeta de
+   imágenes, si existe. Sirve para poner una imagen propia sin tocar las opciones.
+4. **Si no existe `DEFAULT_IDLE`:** muestra la imagen por defecto del juego, `PinballFX3.png`
    para Pinball FX3 y Classic.
-4. **Si tampoco existe:** negro.
+5. **Si tampoco existe:** negro.
 
 **Carpeta de imágenes:** si no pasas `--backglass-path`, dmdext toma la carpeta del
 ejecutable del juego y usa `data\steam`, donde están las mesas (`*.pxp`). En el cabinet:

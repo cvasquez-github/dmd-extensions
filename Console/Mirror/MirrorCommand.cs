@@ -299,9 +299,16 @@ namespace DmdExt.Mirror
 		}
 
 		/// <summary>
+		/// Name of an image in the backglass folder shown while no game is running, before the
+		/// default image of the source's game.
+		/// </summary>
+		private const string DefaultIdleImageName = "DEFAULT_IDLE";
+
+		/// <summary>
 		/// Returns the path of the backglass image of the given game. If no game is running or
-		/// the game has no image, returns --backglass-idle, or else the default image of the
-		/// source's game, or null if there's none.
+		/// the game has no image, returns --backglass-idle, or else DEFAULT_IDLE.png (or .jpg)
+		/// in the backglass folder, or else the default image of the source's game, or null if
+		/// there's none.
 		/// </summary>
 		private string FindBackglassImage(ISource source, string gameName)
 		{
@@ -331,11 +338,19 @@ namespace DmdExt.Mirror
 			if (_options.BackglassIdle != null) {
 				return _options.BackglassIdle;
 			}
-			var defaultImage = folder == null || defaultName == null ? null : FindImage(folder, defaultName);
-			if (defaultImage != null) {
-				Logger.Info("Showing default backglass {0}.", defaultImage);
+			if (folder == null) {
+				return null;
 			}
-			return defaultImage;
+
+			// an own idle image in the backglass folder, else the default image of the source's game
+			foreach (var name in new[] { DefaultIdleImageName, defaultName }) {
+				var image = name == null ? null : FindImage(folder, name);
+				if (image != null) {
+					Logger.Info("Showing default backglass {0}.", image);
+					return image;
+				}
+			}
+			return null;
 		}
 
 		/// <summary>

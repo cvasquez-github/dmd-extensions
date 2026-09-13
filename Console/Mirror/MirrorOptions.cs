@@ -42,7 +42,7 @@ namespace DmdExt.Mirror
 		[Option("backglass-path", HelpText = "Folder with the backglass images (PNG or JPG). Default for Pinball FX3 and Pinball FX Classic: the game's \"data\\steam\" folder, where the tables are.")]
 		public string BackglassPath { get; set; }
 
-		[Option("backglass-idle", HelpText = "Image shown in the backglass window while no game is running, or if a game has no image. Default: the game's default image in the backglass folder, e.g. \"PinballFX3.png\" for Pinball FX3 and Pinball FX Classic, or black if there's none.")]
+		[Option("backglass-idle", HelpText = "Image shown in the backglass window while no game is running, or if a game has no image. Default: \"DEFAULT_IDLE.png\" in the backglass folder if there is one, else the game's default image there, e.g. \"PinballFX3.png\" for Pinball FX3 and Pinball FX Classic, or black.")]
 		public string BackglassIdle { get; set; }
 
 		[OptionArray("colors", HelpText = "[futurepinball] Static DMD palette colors. Provide five or sixteen RGB hex colors, e.g. \"#000000\" \"#8E5525\" \"#F6B832\" \"#B95B00\" \"#F3EEC4\".")]
