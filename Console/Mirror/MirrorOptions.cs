@@ -33,6 +33,18 @@ namespace DmdExt.Mirror
 		[Option("fx3-legacy", HelpText = "[pinballfx3] If set, don't use the memory grabber but the legacy screen grabber, like Pinball FX2. Default: false.")]
 		public bool Fx3GrabScreen { get; set; } = false;
 
+		[Option("backglass", HelpText = "Shows a window with the backglass image of the running game, named after the game, e.g. \"WMS_Indiana_Jones.png\". Default: false.")]
+		public bool Backglass { get; set; } = false;
+
+		[OptionArray("backglass-position", HelpText = "Position and size of the backglass window. Four values: <Left> <Top> <Width> <Height>. Default: \"0 0 1920 1080\".")]
+		public int[] BackglassPosition { get; set; } = { 0, 0, 1920, 1080 };
+
+		[Option("backglass-path", HelpText = "Folder with the backglass images (PNG or JPG). Default for Pinball FX3 and Pinball FX Classic: the game's \"data\\steam\" folder, where the tables are.")]
+		public string BackglassPath { get; set; }
+
+		[Option("backglass-idle", HelpText = "Image shown in the backglass window while no game is running, or if a game has no image. Default: the game's default image in the backglass folder, e.g. \"PinballFX3.png\" for Pinball FX3 and Pinball FX Classic, or black if there's none.")]
+		public string BackglassIdle { get; set; }
+
 		[OptionArray("colors", HelpText = "[futurepinball] Static DMD palette colors. Provide five or sixteen RGB hex colors, e.g. \"#000000\" \"#8E5525\" \"#F6B832\" \"#B95B00\" \"#F3EEC4\".")]
 		public string[] Colors { get; set; } = new string[] {};
 
@@ -59,6 +71,10 @@ namespace DmdExt.Mirror
 						throw new InvalidOptionException("Argument --colors must contain valid RGB colors. Example: \"#ff0000\".");
 					}
 				}
+			}
+
+			if (BackglassPosition.Length != 4) {
+				throw new InvalidOptionException("Argument --backglass-position must have four values: \"<Left> <Top> <Width> <Height>\".");
 			}
 
 			if (Source == SourceType.Screen) {

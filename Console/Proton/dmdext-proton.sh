@@ -23,13 +23,34 @@ SOURCE="pinballfxclassic"
 # show the virtual DMD on this machine (true or false)
 VIRTUAL_DMD=true
 
-# position of the virtual DMD's top-left corner, in desktop pixels. each screen's
-# position is shown as "Geometry" by "kscreen-doctor -o".
-DMD_X=1920
-DMD_Y=0
+# backglass window showing <table name>.png (or .jpg), e.g. WMS_Indiana_Jones.png
+BACKGLASS=false
 
-# width of the virtual DMD in pixels, the height follows the DMD's aspect ratio
-DMD_WIDTH=1280
+# screen area of the backglass, in desktop pixels. each screen's position is shown as
+# "Geometry" by "kscreen-doctor -o". the virtual DMD is placed relative to it.
+BACKGLASS_X=0
+BACKGLASS_Y=0
+BACKGLASS_WIDTH=1920
+BACKGLASS_HEIGHT=1080
+
+# folder with the backglass images. leave empty to use the game's data/steam folder,
+# where the tables are.
+BACKGLASS_PATH=""
+
+# image shown in the backglass window while no table is loaded, or if a table has no
+# image. leave empty to use the game's default image from the backglass folder
+# (PinballFX3.png for Pinball FX Classic), or black if there's none.
+BACKGLASS_IDLE=""
+
+# virtual DMD window: its width in desktop pixels, the black border around the dots
+# (in dots), and the space below it, to the bottom of the backglass area. the height
+# follows from the DMD's aspect ratio, and it's centered on the backglass area.
+DMD_WIDTH=736
+DMD_PADDING=3
+DMD_BOTTOM_MARGIN=12
+DMD_HEIGHT=$(( (DMD_WIDTH * (32 + 2 * DMD_PADDING) + 64 + DMD_PADDING) / (128 + 2 * DMD_PADDING) ))
+DMD_X=$((BACKGLASS_X + (BACKGLASS_WIDTH - DMD_WIDTH) / 2))
+DMD_Y=$((BACKGLASS_Y + BACKGLASS_HEIGHT - DMD_BOTTOM_MARGIN - DMD_HEIGHT))
 
 # stream the DMD over the network to another machine (dmdext's WebSocket network
 # stream, e.g. to a receiver on a Raspberry Pi). leave NETWORK_HOST empty to disable.
@@ -62,7 +83,8 @@ win_path() {
 # network stream, which keeps retrying so the receiver can start at any time.
 OUTPUT_ARGS=()
 if [ "$VIRTUAL_DMD" = true ]; then
-	OUTPUT_ARGS+=(-d virtual --virtual-position "$DMD_X" "$DMD_Y" "$DMD_WIDTH" --virtual-stay-on-top)
+	OUTPUT_ARGS+=(-d virtual --virtual-position "$DMD_X" "$DMD_Y" "$DMD_WIDTH" "$DMD_HEIGHT" --virtual-stay-on-top
+		--virtual-frame-padding "$DMD_PADDING" "$DMD_PADDING" "$DMD_PADDING" "$DMD_PADDING")
 elif [ -n "$NETWORK_HOST" ]; then
 	OUTPUT_ARGS+=(-d network)
 fi
@@ -93,6 +115,21 @@ GAME_PID=$!
 		fi
 	fi
 
+	BACKGLASS_ARGS=()
+	if [ "$BACKGLASS" = true ]; then
+		BACKGLASS_ARGS=(--backglass --backglass-position "$BACKGLASS_X" "$BACKGLASS_Y" "$BACKGLASS_WIDTH" "$BACKGLASS_HEIGHT")
+		if [ -n "$BACKGLASS_PATH" ]; then
+			BACKGLASS_ARGS+=(--backglass-path "$(win_path "$BACKGLASS_PATH")")
+		fi
+		if [ -n "$BACKGLASS_IDLE" ]; then
+			if [ -f "$BACKGLASS_IDLE" ]; then
+				BACKGLASS_ARGS+=(--backglass-idle "$(win_path "$BACKGLASS_IDLE")")
+			else
+				echo "Backglass idle image $BACKGLASS_IDLE not found, the backglass will be black." >> "$LOG"
+			fi
+		fi
+	fi
+
 	CLIENT=""
 	for candidate in "$HOME"/.local/share/Steam/steamapps/common/SteamLinuxRuntime_*/pressure-vessel/bin/steam-runtime-launch-client; do
 		if [ -x "$candidate" ]; then
@@ -113,9 +150,9 @@ GAME_PID=$!
 	# wait up to two minutes for the game's session to come up
 	for _ in $(seq 120); do
 		if client --list 2>/dev/null | grep -qx -- "--bus-name=$BUS_NAME"; then
-			echo "Starting dmdext: mirror -s $SOURCE -q ${OUTPUT_ARGS[*]} ${IDLE_ARGS[*]} ${EXTRA_ARGS[*]}" >> "$LOG"
+			echo "Starting dmdext: mirror -s $SOURCE -q ${OUTPUT_ARGS[*]} ${IDLE_ARGS[*]} ${BACKGLASS_ARGS[*]} ${EXTRA_ARGS[*]}" >> "$LOG"
 			client --bus-name="$BUS_NAME" -- \
-				env WINEDEBUG=-all wine "$DMDEXT" mirror -s "$SOURCE" -q "${OUTPUT_ARGS[@]}" "${IDLE_ARGS[@]}" "${EXTRA_ARGS[@]}" \
+				env WINEDEBUG=-all wine "$DMDEXT" mirror -s "$SOURCE" -q "${OUTPUT_ARGS[@]}" "${IDLE_ARGS[@]}" "${BACKGLASS_ARGS[@]}" "${EXTRA_ARGS[@]}" \
 				< /dev/null >> "$LOG" 2>&1
 			exit
 		fi

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
@@ -22,6 +23,7 @@ using LibDmd.Input.TPAGrabber;
 using LibDmd.Output;
 using LibDmd.Output.FileOutput;
 using LibDmd.Output.Network;
+using LibDmd.Output.Virtual.Backglass;
 using LibDmd.Processor;
 
 namespace DmdExt.Mirror
@@ -33,6 +35,7 @@ namespace DmdExt.Mirror
 		private ColorizationLoader _colorizationLoader;
 		private readonly CompositeDisposable _subscriptions = new CompositeDisposable();
 		private List<IDestination> _renderers;
+		private VirtualBackglass _backglass;
 
 		public MirrorCommand(IConfiguration config, MirrorOptions options)
 		{
@@ -255,6 +258,21 @@ namespace DmdExt.Mirror
 				}
 			}
 
+			// backglass window, showing the image named after the running game
+			if (_options.Backglass) {
+				var graph = graphs.Graphs.FirstOrDefault(g => g.Source is IGameNameSource);
+				if (graph != null) {
+					var position = _options.BackglassPosition;
+					_backglass = new VirtualBackglass(position[0], position[1], position[2], position[3]);
+					_backglass.SetImage(_options.BackglassIdle);
+					_subscriptions.Add(((IGameNameSource)graph.Source).GetGameName().Subscribe(name => {
+						_backglass.SetImage(FindBackglassImage(graph.Source, name));
+					}));
+				} else {
+					Logger.Warn("No backglass window, since the source doesn't report which game is running.");
+				}
+			}
+
 			// raw output
 			if (_config.RawOutput.Enabled) {
 				var graph = graphs.Graphs.FirstOrDefault();
@@ -277,6 +295,62 @@ namespace DmdExt.Mirror
 		{
 			base.Dispose();
 			_subscriptions.Dispose();
+			_backglass?.Dispose();
+		}
+
+		/// <summary>
+		/// Returns the path of the backglass image of the given game. If no game is running or
+		/// the game has no image, returns --backglass-idle, or else the default image of the
+		/// source's game, or null if there's none.
+		/// </summary>
+		private string FindBackglassImage(ISource source, string gameName)
+		{
+			var folder = _options.BackglassPath;
+			string defaultName = null;
+			if (source is PinballFX3MemoryGrabber fx3) {
+				// Pinball FX3 / Classic: next to the table files
+				if (folder == null && fx3.GameFolder != null) {
+					folder = Path.Combine(fx3.GameFolder, "data", "steam");
+				}
+				defaultName = "PinballFX3";
+			}
+
+			if (gameName != null) {
+				var image = folder == null ? null : FindImage(folder, gameName);
+				if (image != null) {
+					Logger.Info("Showing backglass {0}.", image);
+					return image;
+				}
+				if (folder == null) {
+					Logger.Warn("No backglass folder known for {0}, set one with --backglass-path.", gameName);
+				} else {
+					Logger.Warn("No backglass image for {0} in {1}.", gameName, folder);
+				}
+			}
+
+			if (_options.BackglassIdle != null) {
+				return _options.BackglassIdle;
+			}
+			var defaultImage = folder == null || defaultName == null ? null : FindImage(folder, defaultName);
+			if (defaultImage != null) {
+				Logger.Info("Showing default backglass {0}.", defaultImage);
+			}
+			return defaultImage;
+		}
+
+		/// <summary>
+		/// Returns the path of the PNG or JPG image with the given name in the given folder, or
+		/// null if there's none.
+		/// </summary>
+		private static string FindImage(string folder, string name)
+		{
+			foreach (var extension in new[] { ".png", ".jpg" }) {
+				var path = Path.Combine(folder, name + extension);
+				if (File.Exists(path)) {
+					return path;
+				}
+			}
+			return null;
 		}
 
 		private AbstractConverter SetupColorizer(string gameName)

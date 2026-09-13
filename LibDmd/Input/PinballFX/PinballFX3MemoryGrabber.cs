@@ -45,6 +45,11 @@ namespace LibDmd.Input.PinballFX
 
 		public IObservable<string> GetGameName() => _gameName;
 
+		/// <summary>
+		/// Folder of the game's executable, once the game process was found.
+		/// </summary>
+		public string GameFolder { get; private set; }
+
 		// True while no table is loaded, e.g. in the game's menus.
 		private bool _noGame;
 
@@ -203,6 +208,11 @@ namespace LibDmd.Input.PinballFX
 		protected override IntPtr AttachGameProcess(Process p)
 		{
 			if (p.ProcessName == "Pinball FX3" || p.ProcessName == "Pinball FX Classic") {
+				try {
+					GameFolder = System.IO.Path.GetDirectoryName(p.MainModule.FileName);
+				} catch (Exception e) {
+					Logger.Warn($"Could not determine the folder of {p.ProcessName}: {e.Message}");
+				}
 				return GetPointerBaseAddress(p);
 			}
 
