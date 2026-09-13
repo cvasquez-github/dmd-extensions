@@ -65,6 +65,10 @@ namespace LibDmd.Common
 				Logger.Info("Wine detected, disabling transparency of window \"{0}\".", Title);
 				AllowsTransparency = false;
 				Background = Brushes.Black;
+
+				// Without transparency, a borderless window that can be resized gets a thin light
+				// frame. Its position and size come from the options anyway.
+				ResizeMode = ResizeMode.NoResize;
 			}
 		}
 
