@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using System.Timers;
 using System.Windows.Media;
 using LibDmd.DmdDevice;
@@ -52,7 +53,22 @@ namespace LibDmd.Output.Network
 			_client.OnError += OnError;
 			_client.OnOpen += OnOpen;
 			_client.OnClose += OnClose;
-			_client.Connect();
+			ConnectInBackground(_client);
+		}
+
+		/// <summary>
+		/// Connects without blocking, since connecting to an unreachable host takes about half
+		/// a minute to fail. Frames are only sent once connected anyway.
+		/// </summary>
+		private static void ConnectInBackground(WebSocket client)
+		{
+			Task.Run(() => {
+				try {
+					client.Connect();
+				} catch (Exception e) {
+					Logger.Warn("Could not connect to WebSocket: {0}", e.Message);
+				}
+			});
 		}
 
 		private void OnReconnect(object source, ElapsedEventArgs e)
@@ -211,7 +227,22 @@ namespace LibDmd.Output.Network
 		{
 			_disposed = true;
 			_retryTimer?.Dispose();
-			((IDisposable)_client)?.Dispose();
+
+			// closing waits for a connection attempt in progress, which takes about half a minute
+			// to fail if the host is unreachable, and keeps dmdext (and so the game under Proton)
+			// from exiting. only wait for a proper close when connected.
+			var client = (IDisposable)_client;
+			if (IsAvailable) {
+				client?.Dispose();
+			} else if (client != null) {
+				Task.Run(() => {
+					try {
+						client.Dispose();
+					} catch (Exception e) {
+						Logger.Debug("Error closing WebSocket: {0}", e.Message);
+					}
+				});
+			}
 		}
 
 	}
