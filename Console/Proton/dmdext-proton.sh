@@ -151,7 +151,7 @@ GAME_PID=$!
 			if [ -f "$BACKGLASS_IDLE" ]; then
 				BACKGLASS_ARGS+=(--backglass-idle "$(win_path "$BACKGLASS_IDLE")")
 			else
-				echo "Backglass idle image $BACKGLASS_IDLE not found, the backglass will be black." >> "$LOG"
+				echo "Backglass idle image $BACKGLASS_IDLE not found, using DEFAULT_IDLE or the game's default image." >> "$LOG"
 			fi
 		fi
 	fi
