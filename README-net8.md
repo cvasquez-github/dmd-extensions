@@ -71,7 +71,7 @@ Output in `publish\dmdext-net8-win-x64\`:
 | `dmdext.exe` | Single executable, no dependencies |
 | `dmdext.log.config` | Logging configuration (NLog) |
 | `dmdext-proton.sh` | Steam launch script (section 4) |
-| `idle.png` | DMD image while no table is loaded: dmdext's test image (`Console/Test/TestImage.png`). Used if there's no `DEFAULT_IDLE.gif`, `.png` or `.jpg` next to `dmdext.exe` |
+| `idle.png` | DMD image while no table is loaded: dmdext's test image (`Console/Test/TestImage.png`). Used if there's no other idle image for the DMD (section 4, "Idle images") |
 
 The .NET 8 projects live next to the original (.NET Framework) ones and use their own
 `bin.net8/` and `obj.net8/` folders.
@@ -108,7 +108,8 @@ The .NET 8 projects live next to the original (.NET Framework) ones and use thei
 - **"No table" state**: detected because the pointer to the DMD in the game's memory is null, not because frames stop coming (they also stop while the DMD doesn't change). It's reported only once, and dmdext switches to idle (`--idle-play` or a blank display).
 - **`--url` adds the network** to the chosen destination: virtual DMD and network at the same time.
 - **Backglass window** (`--backglass`, section 5).
-- **`DEFAULT_IDLE` images**: own idle images for the backglass and the DMD, just by dropping files in place (sections 4 and 5).
+- **`DEFAULT_IDLE` images**: own idle images for the backglass and the DMD, for all games or for each Steam game, just by dropping files in place (sections 4 and 5).
+- **Per-game settings**: the script's variables can also be set in a game's Steam launch options (section 4).
 
 ---
 
@@ -126,11 +127,14 @@ The .NET 8 projects live next to the original (.NET Framework) ones and use thei
 4. Adjust the variables at the top of the script (table below) and launch the game from Steam.
    dmdext's log goes to `~/dmdext-mirror.log`, which is cleared on every launch.
 
-The script launches the game, waits for its Proton session (`com.steampowered.App442120`) to
-come up and starts dmdext inside it with `steam-runtime-launch-client`. dmdext uses `-q`, so it
-quits by itself when the game exits.
+The script launches the game, waits for its Proton session (`com.steampowered.App<app id>`,
+e.g. `App442120` for Pinball FX Classic) to come up and starts dmdext inside it with
+`steam-runtime-launch-client`. dmdext uses `-q`, so it quits by itself when the game exits.
 
 ### Script variables
+
+Set them at the top of the script for all games, or in a game's launch options for that game
+only (see "Per-game settings" below).
 
 | Variable | What it does |
 |---|---|
@@ -139,16 +143,58 @@ quits by itself when the game exits.
 | `BACKGLASS` | `true` to show the backglass window |
 | `BACKGLASS_X`, `BACKGLASS_Y`, `BACKGLASS_WIDTH`, `BACKGLASS_HEIGHT` | Screen area of the backglass, in desktop pixels. The DMD is placed relative to it |
 | `BACKGLASS_PATH` | Folder of the images. Empty = the game's `data/steam` folder |
-| `BACKGLASS_IDLE` | Image while no table is loaded. Empty = `DEFAULT_IDLE.png` in the image folder; if it's not there, the game's default image (`PinballFX3.png`); if that's missing too, black |
+| `BACKGLASS_IDLE` | Image while no table is loaded, or if the table has no image. Empty = look for one (see "Idle images" below) |
 | `DMD_WIDTH` | Width of the DMD window in pixels; the height follows from the aspect ratio |
 | `DMD_PADDING` | Black border around the dots, **in DMD dots** |
 | `DMD_BOTTOM_MARGIN` | Space between the DMD and the bottom edge of the backglass area |
 | `NETWORK_HOST`, `NETWORK_PORT`, `NETWORK_PATH` | WebSocket receiver. Empty `NETWORK_HOST` = no network |
-| `IDLE_PLAY` | DMD image while no table is loaded (PNG, JPG or animated GIF). Empty = `DEFAULT_IDLE.gif`, `.png` or `.jpg` next to `dmdext.exe`, if there is one; else `idle.png`. `none` = blank DMD |
-| `EXTRA_ARGS` | Other dmdext arguments, e.g. `(--virtual-dot-glow 0.5)` |
+| `IDLE_PLAY` | DMD image while no table is loaded (PNG, JPG or animated GIF). Empty = look for one (see "Idle images" below). `none` = blank DMD |
+| `EXTRA_ARGS` | Other dmdext arguments, e.g. `(--virtual-dot-glow 0.5)`. Only at the top of the script |
 
 By default the DMD is centered at the bottom of the backglass area. To see each screen's
 position, use `kscreen-doctor -o` (the `Geometry` field).
+
+### Idle images
+
+While no table is loaded, e.g. in the game's menus, the DMD and the backglass show an idle
+image. It can be the same for all games or different for each Steam game. The script tells
+games apart by their Steam app id, which Steam passes to it (`SteamAppId`) and which is written
+to the first line of the log. It's also in the game's store URL,
+`store.steampowered.com/app/<app id>/`.
+
+The first image that exists is used:
+
+| Order | DMD | Backglass |
+|---|---|---|
+| 1. Variable | `IDLE_PLAY` | `BACKGLASS_IDLE` |
+| 2. Image for this game, next to `dmdext.exe` | `DEFAULT_IDLE_DMD_<app id>.gif`, `.png` or `.jpg` | `DEFAULT_IDLE_BACKGLASS_<app id>.png` or `.jpg` |
+| 3. Image for all games | `DEFAULT_IDLE.gif`, `.png` or `.jpg` next to `dmdext.exe` | `DEFAULT_IDLE.png` or `.jpg` in the backglass image folder (section 5) |
+| 4. Default | `idle.png`, dmdext's test image | The game's default image (`PinballFX3.png`), else black |
+
+For example, a pair of images only for Pinball FX Classic (app id `442120`), next to
+`dmdext.exe`:
+
+```
+DEFAULT_IDLE_DMD_442120.gif
+DEFAULT_IDLE_BACKGLASS_442120.png
+```
+
+Another game launched with this script gets its own pair, named after its app id. The backglass
+idle image is also shown for tables without an image of their own.
+
+### Per-game settings
+
+A variable set before the script in a game's launch options applies only to that game, and
+wins over the value at the top of the script:
+
+```
+IDLE_PLAY=/var/home/<user>/Pinball/menu.gif BACKGLASS=false /var/home/<user>/Pinball/dmdext-net8-win-x64/dmdext-proton.sh %command%
+```
+
+This works for the variables whose line at the top of the script has the form
+`NAME="${NAME:-value}"`. When changing a value there, keep that form (e.g.
+`BACKGLASS="${BACKGLASS:-true}"`); a plain `BACKGLASS=true` can't be changed from the launch
+options anymore.
 
 ### Paths under Wine
 
@@ -167,7 +213,8 @@ With `--backglass`, dmdext opens a borderless window showing the image of the ru
 
 1. **With a table:** shows `<table name>.png` (or `.jpg`), e.g. `UNIVERSAL_Jaws.png`,
    `WMS_Indiana_Jones.png`. It's the same name that goes over the network as `gameName`.
-2. **Without a table, or if the table has no image:** shows `--backglass-idle` if set.
+2. **Without a table, or if the table has no image:** shows `--backglass-idle` if set. The
+   script sets it from `BACKGLASS_IDLE` or `DEFAULT_IDLE_BACKGLASS_<app id>` (section 4).
 3. **Without `--backglass-idle`:** shows `DEFAULT_IDLE.png` (or `.jpg`) from the image folder,
    if there is one. This sets an own image without touching the options.
 4. **Without `DEFAULT_IDLE`:** shows the game's default image, `PinballFX3.png` for Pinball FX3
